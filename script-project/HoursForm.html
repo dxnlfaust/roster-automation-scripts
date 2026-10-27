@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  :root { --blue:#1a73e8; --line:#dadce0; --grey:#5f6368; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent }
+  body { font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; margin:0;
+         background:#f1f3f4; color:#202124; font-size:16px; padding-bottom:96px }
+  header { background:#202124; color:#fff; padding:14px 16px; position:sticky; top:0; z-index:5 }
+  header h1 { font-size:17px; margin:0 }
+  header p { margin:3px 0 0; font-size:13px; color:#bdc1c6 }
+  .wrap { padding:14px }
+  .card { background:#fff; border-radius:10px; padding:14px; margin-bottom:12px;
+          box-shadow:0 1px 2px rgba(0,0,0,.12) }
+  label { display:block; font-size:13px; color:var(--grey); margin-bottom:5px; font-weight:600 }
+  select, input, textarea { width:100%; padding:11px; font-size:16px; border:1px solid var(--line);
+          border-radius:8px; background:#fff; font-family:inherit }
+  .person { border-top:1px solid var(--line); padding:12px 0 4px }
+  .person:first-of-type { border-top:none }
+  .prow { display:flex; align-items:center; gap:10px }
+  .pname { flex:1; font-weight:600 }
+  .role { font-size:11px; color:var(--grey); font-weight:400; display:block }
+  .hrs { width:84px; text-align:center; font-weight:600 }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px }
+  .chip { border:1px solid var(--line); border-radius:16px; padding:5px 12px; font-size:13px;
+          background:#fff; cursor:pointer; user-select:none }
+  .chip.on { background:var(--blue); color:#fff; border-color:var(--blue) }
+  .extra { display:none; gap:8px; margin-top:9px }
+  .extra.show { display:flex }
+  .extra input { flex:1 }
+  .btn { width:100%; padding:14px; font-size:16px; font-weight:600; border:none;
+         border-radius:8px; background:var(--blue); color:#fff; cursor:pointer }
+  .btn.ghost { background:#fff; color:var(--blue); border:1px solid var(--blue) }
+  .bar { position:fixed; left:0; right:0; bottom:0; background:#fff; padding:12px 14px;
+         border-top:1px solid var(--line); box-shadow:0 -2px 8px rgba(0,0,0,.08) }
+  .muted { color:var(--grey); font-size:13px }
+  .warn { background:#fef7e0; border-left:4px solid #f6bf26; padding:10px; border-radius:0 6px 6px 0;
+          font-size:14px; margin-bottom:12px }
+  .done { background:#e6f4ea; border-left:4px solid #0b8043; padding:10px; border-radius:0 6px 6px 0;
+          font-size:14px; margin-bottom:12px }
+  .hide { display:none }
+  #splash { text-align:center; padding:50px 20px; color:var(--grey) }
+  .sec { font-size:15px; font-weight:700; margin:0 0 10px }
+  .sub { font-size:12px; color:var(--grey); margin:-6px 0 10px }
+  .spwrap { max-height:290px; overflow-y:auto; border:1px solid var(--line); border-radius:8px;
+            padding:8px; margin-top:8px; -webkit-overflow-scrolling:touch }
+  .spcat { font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--grey);
+           font-weight:700; margin:10px 0 5px }
+  .sp { display:block; padding:8px 10px; border-radius:6px; font-size:14px; cursor:pointer }
+  .sp.on { background:#e8f0fe; font-weight:600 }
+  .sp input { width:auto; margin-right:8px; vertical-align:-2px }
+  .picked { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px }
+  .tag { background:var(--blue); color:#fff; border-radius:14px; padding:4px 10px; font-size:12.5px }
+  .tag b { cursor:pointer; margin-left:6px; opacity:.85 }
+  .radio { display:block; padding:9px 10px; border:1px solid var(--line); border-radius:8px;
+           margin-bottom:6px; font-size:14px; cursor:pointer }
+  .radio.on { border-color:var(--blue); background:#e8f0fe; font-weight:600 }
+  .radio input { width:auto; margin-right:8px; vertical-align:-2px }
+  .two { display:flex; gap:10px }
+  .two > div { flex:1 }
+</style>
+</head>
+<body>
+<header>
+  <h1>Apunga — log hours</h1>
+  <p id="sub">Loading…</p>
+</header>
+
+<div id="splash">Loading the roster…</div>
+
+<div class="wrap hide" id="app">
+  <div class="card">
+    <label for="who">Your name</label>
+    <select id="who"><option value="">Choose…</option></select>
+    <div style="height:12px"></div>
+    <label for="date">Date</label>
+    <select id="date"></select>
+    <div style="height:12px"></div>
+    <label for="site">Site</label>
+    <select id="site"><option value="">Choose…</option></select>
+    <div id="already" class="hide" style="margin-top:10px"></div>
+  </div>
+
+  <div id="crewCard" class="card hide">
+    <div class="prow" style="margin-bottom:8px">
+      <b style="flex:1">Who worked</b>
+      <span class="chip" id="rainAll">Rained out — all</span>
+    </div>
+    <div id="crew"></div>
+    <div style="height:12px"></div>
+    <button class="btn ghost" id="addBtn">+ Add another staff member</button>
+    <div id="addRow" class="extra" style="margin-top:10px">
+      <select id="addPick"><option value="">Choose staff…</option></select>
+    </div>
+  </div>
+
+  <div id="noteCard" class="card hide">
+    <label for="siteNote">Anything else about the day? (optional)</label>
+    <textarea id="siteNote" rows="2" placeholder="e.g. finished early, gear issue"></textarea>
+  </div>
+</div>
+
+<div class="wrap hide" id="doneWrap">
+  <div class="card">
+    <div class="done" id="doneMsg"></div>
+    <p class="muted" id="doneWhere"></p>
+    <button class="btn" id="startSummary">Add site summary</button>
+    <div style="height:8px"></div>
+    <button class="btn ghost" id="again">Skip — log another site</button>
+    <p class="muted" style="margin:10px 0 0; text-align:center">The summary is optional.</p>
+  </div>
+</div>
+
+<div class="wrap hide" id="sumWrap">
+  <div class="card">
+    <p class="sec">Site summary</p>
+    <p class="sub" id="sumWhere"></p>
+    <label for="otherSup">Other supervisor on site (optional)</label>
+    <select id="otherSup"><option value="">None</option></select>
+    <div style="height:12px"></div>
+    <div class="two">
+      <div><label for="maintH">Maintenance hrs</label>
+        <input id="maintH" type="number" step="0.5" min="0" placeholder="0"></div>
+      <div><label for="primH">Primary hrs</label>
+        <input id="primH" type="number" step="0.5" min="0" placeholder="0"></div>
+    </div>
+    <p class="muted" id="hrTotal" style="margin:8px 0 0"></p>
+  </div>
+
+  <div class="card">
+    <p class="sec">Target species</p>
+    <div id="lastSp"></div>
+    <input id="spSearch" type="text" placeholder="Search species…">
+    <div class="picked" id="spPicked"></div>
+    <div class="spwrap" id="spList"></div>
+    <div style="height:10px"></div>
+    <label for="spOther">Other species (not on the list)</label>
+    <input id="spOther" type="text" placeholder="e.g. Bryophyllum sp.">
+  </div>
+
+  <div class="card">
+    <p class="sec">Herbicides</p>
+    <div id="herb"></div>
+    <input id="herbOther" class="hide" type="text" placeholder="Which herbicide / method?">
+  </div>
+
+  <div class="card">
+    <p class="sec">The day's work</p>
+    <label for="works">Description of works</label>
+    <textarea id="works" rows="3" placeholder="What the crew did today"></textarea>
+    <div style="height:12px"></div>
+    <label for="future">Proposed future works / next steps</label>
+    <textarea id="future" rows="2"></textarea>
+  </div>
+
+  <div class="card">
+    <p class="sec">Observations</p>
+    <label for="fauna">Fauna sightings</label>
+    <input id="fauna" type="text">
+    <div style="height:12px"></div>
+    <label for="flora">Flora of interest (rare / noxious / WONS)</label>
+    <input id="flora" type="text">
+  </div>
+
+  <div class="card">
+    <p class="sec">WHS, broken equipment or material requests</p>
+    <div id="whs"></div>
+    <textarea id="whsDetail" class="hide" rows="3" placeholder="Describe the issue"></textarea>
+  </div>
+</div>
+
+<div class="bar hide" id="bar">
+  <button class="btn" id="send">Submit hours</button>
+  <p class="muted" id="tally" style="margin:8px 0 0; text-align:center"></p>
+</div>
+
+<div class="bar hide" id="sumBar">
+  <button class="btn" id="sendSum">Submit site summary</button>
+  <div style="height:8px"></div>
+  <button class="btn ghost" id="cancelSum">Skip this</button>
+</div>
+
+<script>
+var DATA = null, VISIT = null, ROWS = [];
+var PICKED = {}, HERB = 'None', WHS = 'No';
+
+var SPECIES = {
+ "Quick / generic": [
+  "Annuals",
+  "Grasses"
+ ],
+ "Grasses & sedges": [
+  "Andropogon virginicus (Whisky Grass)",
+  "Axonopus spp. (Carpet Grass)",
+  "Cenchrus clandestinus (Kikuyu)",
+  "Cortaderia spp. (Pampas Grass)",
+  "Cynodon dactylon (Couch Grass)",
+  "Cyperus congestus",
+  "Cyperus eragrostis",
+  "Digitaria sanguinalis (Summer Grass)",
+  "Ehrharta erecta",
+  "Ehrharta longiflora",
+  "Eleusine indica (Barnyard Grass)",
+  "Eleusine tristachya (Goose Grass, Crab Grass)",
+  "Eragrostis curvula (African Love Grass)",
+  "Nassella neesiana (Chilean Needle Grass)",
+  "Paspalum dilatatum",
+  "Phyllostachys spp. (Creeping Bamboo)",
+  "Setaria parviflora (Pigeon Grass)",
+  "Sorghum halapense (Johnson Grass)",
+  "Sporobolus africanus (Parramatta Grass)",
+  "Vulpia spp."
+ ],
+ "Vines & scramblers": [
+  "Anredera cordifolia (Madeira Vine)",
+  "Araujia hortorum (Moth Vine)",
+  "Asparagus aethiopicus (Asparagus Fern)",
+  "Asparagus asparagoides (Bridal Creeper)",
+  "Asparagus plumosus (Climbing Asparagus)",
+  "Cardiospermum grandiflorum (Balloon Vine)",
+  "Delairea odorata (Cape Ivy)",
+  "Dolichandra unguis-cati (Cat's Claw Creeper)",
+  "Hedera helix (English Ivy)",
+  "Ipomoea cairica (Coastal Morning Glory)",
+  "Ipomoea indica (Morning Glory)",
+  "Lonicera japonica (Japanese Honeysuckle)",
+  "Rubus fructicosus (Blackberry)",
+  "Rumex sagittatus (Turkey Rhubarb)",
+  "Salpichroa origanifolia",
+  "Thunbergia alata (Black-eyed Susan)"
+ ],
+ "Herbs & groundcovers": [
+  "Achyranthes",
+  "Ageratina adenophora (Crofton Weed)",
+  "Ageratina riparia (Mist Flower)",
+  "Aster subulatus",
+  "Bidens pilosa",
+  "Chlorophytum comosum (Spider Plant, Ribbon Plant)",
+  "Cirsium vulgare (Spear Thistle)",
+  "Conyza bonariensis (Fleabane)",
+  "Crassocephalum crepidioides (Thickhead)",
+  "Erigeron karvinskianus (Seaside Daisy)",
+  "Hydrocotyle bonariensis",
+  "Modiola caroliniana (Creeping Mallow)",
+  "Oxalis spp. (weedy)",
+  "Parietaria judaica (Asthma Weed)",
+  "Phytolacca octandra (Inkweed)",
+  "Ranunculus repens (Creeping Buttercup)",
+  "Senecio madagascariensis (Fireweed)",
+  "Sida rhombifolia",
+  "Sonchus oleraceus (Sowthistle)",
+  "Taraxacum officinale (Dandelion)",
+  "Tradescantia fluminenis (Trad)",
+  "Vinca major (Blue Periwinkle)"
+ ],
+ "Bulbs, lilies & irises": [
+  "Agapanthus spp.",
+  "Alstromeria pulchela (Peruvian Lily)",
+  "Aristea ecklonii (Blue Stars)",
+  "Crocosmia crocosmiiflora (Montbretia)",
+  "Hedychium gardnerianum (Ginger Lilly)",
+  "Lilium formosanum (Formosan Lily)",
+  "Nothoscordum inodorum (Onion Weed)",
+  "Watsonia spp."
+ ],
+ "Shrubs": [
+  "Buddleja davidii",
+  "Cestrum parqui (Green Cestrum)",
+  "Chrysanthemoides monilifera ssp monilifera (Boneseed)",
+  "Chrysanthemoides monilifera ssp. rotundata (Bitou Bush)",
+  "Cotoneaster glaucophyllus",
+  "Lantana camara",
+  "Ligustrum sinense (Small-leaved Privet)",
+  "Ochna serulata",
+  "Polygala myrtifolia",
+  "Ricinus communis (Castor Oil Plant)",
+  "Senna pendula",
+  "Solanum mauritianum (Wild Tobacco)"
+ ],
+ "Trees": [
+  "Acer negundo (Box-elder Maple)",
+  "Cinnamomum camphora (Camphor Laurel)",
+  "Ligustrum lucidum (Large-leaved Privet)",
+  "Olea europaea subspecies cuspidata (African Olive)",
+  "Pittosporum undulatum (Sweet Pittosporum)"
+ ],
+ "Succulents & cacti": [
+  "Kalanchoe delagoensis (Mother of Millions)",
+  "Opuntia spp. (Prickly Pear)"
+ ],
+ "Aquatic & wetland": [
+  "Alternanthera philoxeroides (Alligator weed)",
+  "Ludwigia peruviana"
+ ],
+ "Ferns": [
+  "Nephrolepis cordifolia (Fishbone Fern)"
+ ]
+};
+
+var HERBICIDES = ['None', 'Glyphosate (cut/scrape & paint)', 'Glyphosate (Foliar Spray)',
+                  'Starane (Foliar Spray)', 'Other'];
+
+function $(id) { return document.getElementById(id); }
+
+google.script.run.withSuccessHandler(init).withFailureHandler(function (e) {
+  $('splash').innerHTML = '<b>Could not load the roster.</b><br>' + e.message;
+}).hoursBootstrap();
+
+function init(d) {
+  DATA = d;
+  $('splash').classList.add('hide');
+  $('app').classList.remove('hide');
+  $('bar').classList.remove('hide');
+  $('sub').textContent = 'Confirm each person\u2019s hours at the end of the day';
+
+  var sups = {};
+  d.visits.forEach(function (v) { if (v.supervisor) sups[v.supervisor] = 1; });
+  fill($('who'), Object.keys(sups).sort(), 'Choose\u2026');
+  fill($('addPick'), d.allStaff, 'Choose staff\u2026');
+
+  var dates = d.dates.slice();
+  fill($('date'), dates, null, function (x) { return pretty(x); });
+  $('date').value = dates.indexOf(d.today) >= 0 ? d.today : dates[dates.length - 1];
+
+  $('date').onchange = refreshSites;
+  $('who').onchange = refreshSites;
+  $('site').onchange = loadCrew;
+  $('addBtn').onclick = function () { $('addRow').classList.toggle('show'); };
+  $('addPick').onchange = function () {
+    if (this.value) { addPerson(this.value, 'Crew', 7.5); this.value = ''; render(); }
+  };
+  $('rainAll').onclick = function () {
+    ROWS.forEach(function (r) { r.actual = 0; r.reason = 'Rained out'; });
+    render();
+  };
+  $('send').onclick = submit;
+  fill($('otherSup'), d.allStaff, 'None');
+  buildRadios('herb', HERBICIDES, function (v) {
+    HERB = v; $('herbOther').classList.toggle('hide', v !== 'Other');
+  });
+  buildRadios('whs', ['No', 'Yes'], function (v) {
+    WHS = v; $('whsDetail').classList.toggle('hide', v !== 'Yes');
+  });
+  $('spSearch').oninput = renderSpecies;
+  $('maintH').oninput = hrTotal; $('primH').oninput = hrTotal;
+  $('startSummary').onclick = openSummary;
+  $('cancelSum').onclick = function () { $('again').click(); };
+  $('sendSum').onclick = sendSummary;
+
+  $('again').onclick = function () {
+    // NB: don't use location.reload() — this page runs in a sandboxed iframe and
+    // reloading it yields a blank document. Reset in place instead.
+    $('doneWrap').classList.add('hide');
+    $('sumWrap').classList.add('hide');
+    $('sumBar').classList.add('hide');
+    $('app').classList.remove('hide');
+    $('bar').classList.remove('hide');
+    $('siteNote').value = '';
+    resetSummary();
+    VISIT = null; ROWS = [];
+    $('crewCard').classList.add('hide');
+    $('noteCard').classList.add('hide');
+    refreshSites();
+    window.scrollTo(0, 0);
+  };
+  refreshSites();
+}
+
+function fill(sel, arr, placeholder, labelFn) {
+  sel.innerHTML = '';
+  if (placeholder) sel.appendChild(new Option(placeholder, ''));
+  arr.forEach(function (x) { sel.appendChild(new Option(labelFn ? labelFn(x) : x, x)); });
+}
+
+function pretty(iso) {
+  var p = iso.split('-');
+  var dt = new Date(+p[0], +p[1] - 1, +p[2]);
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()] + ' ' + (+p[2]) + ' ' +
+         ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1];
+}
+
+function refreshSites() {
+  var date = $('date').value, who = $('who').value;
+  var list = DATA.visits.filter(function (v) { return v.date === date; });
+  var mine = who ? list.filter(function (v) { return v.supervisor === who; }) : [];
+  var show = mine.length ? mine : list;
+  fill($('site'), show.map(function (v) { return v.site; }), 'Choose\u2026');
+  VISIT = null; ROWS = [];
+  $('crewCard').classList.add('hide');
+  $('noteCard').classList.add('hide');
+  $('already').classList.add('hide');
+  $('tally').textContent = '';
+}
+
+function loadCrew() {
+  var date = $('date').value, site = $('site').value;
+  VISIT = DATA.visits.filter(function (v) { return v.date === date && v.site === site; })[0];
+  if (!VISIT) return;
+
+  var prev = DATA.submitted[date + '|' + site];
+  var box = $('already');
+  if (prev) {
+    box.className = 'warn';
+    box.innerHTML = 'Already submitted by <b>' + prev + '</b>. Sending again replaces it.';
+  } else { box.classList.add('hide'); }
+
+  ROWS = VISIT.crew.map(function (c) {
+    return { name: c.name, role: c.role, sched: c.sched, actual: c.sched,
+             reason: 'Full day', rope: 0, chainsaw: 0, note: '' };
+  });
+  $('crewCard').classList.remove('hide');
+  $('noteCard').classList.remove('hide');
+  render();
+}
+
+function addPerson(name, role, sched) {
+  if (ROWS.some(function (r) { return r.name === name; })) return;
+  ROWS.push({ name: name, role: role, sched: 0, actual: sched,
+              reason: 'Extra hours', rope: 0, chainsaw: 0, note: '' });
+}
+
+function render() {
+  var box = $('crew');
+  box.innerHTML = '';
+  ROWS.forEach(function (r, i) {
+    var d = document.createElement('div');
+    d.className = 'person';
+    var chips = DATA.reasons.map(function (x) {
+      return '<span class="chip ' + (r.reason === x ? 'on' : '') + '" data-i="' + i +
+             '" data-r="' + x + '">' + x + '</span>';
+    }).join('');
+    d.innerHTML =
+      '<div class="prow"><span class="pname">' + r.name +
+      '<span class="role">' + r.role + (r.sched ? ' \u00b7 rostered ' + r.sched + 'h' : ' \u00b7 added') + '</span></span>' +
+      '<input class="hrs" type="number" step="0.5" min="0" max="24" value="' + r.actual +
+      '" data-i="' + i + '" data-f="actual"></div>' +
+      '<div class="chips">' + chips + '</div>' +
+      '<div class="extra ' + (r.reason !== 'Full day' || r.rope || r.chainsaw ? 'show' : '') + '">' +
+        '<input type="number" step="0.5" min="0" placeholder="Rope hrs" value="' +
+          (r.rope || '') + '" data-i="' + i + '" data-f="rope">' +
+        '<input type="number" step="0.5" min="0" placeholder="Chainsaw hrs" value="' +
+          (r.chainsaw || '') + '" data-i="' + i + '" data-f="chainsaw">' +
+        '<input type="text" placeholder="Note" value="' + (r.note || '') +
+          '" data-i="' + i + '" data-f="note">' +
+      '</div>';
+    box.appendChild(d);
+  });
+
+  Array.prototype.forEach.call(box.querySelectorAll('.chip'), function (el) {
+    el.onclick = function () {
+      var i = +this.getAttribute('data-i');
+      ROWS[i].reason = this.getAttribute('data-r');
+      if (ROWS[i].reason === 'Rained out') ROWS[i].actual = 0;
+      if (ROWS[i].reason === 'No show') ROWS[i].actual = 0;
+      if (ROWS[i].reason === 'Full day') ROWS[i].actual = ROWS[i].sched || ROWS[i].actual;
+      render();
+    };
+  });
+  Array.prototype.forEach.call(box.querySelectorAll('input'), function (el) {
+    el.onchange = function () {
+      var i = +this.getAttribute('data-i'), f = this.getAttribute('data-f');
+      ROWS[i][f] = (f === 'note') ? this.value : (this.value === '' ? 0 : Number(this.value));
+      if (f === 'actual') $('tally').textContent = tally();
+    };
+  });
+  $('tally').textContent = tally();
+}
+
+function tally() {
+  var a = 0, s = 0;
+  ROWS.forEach(function (r) { a += Number(r.actual) || 0; s += Number(r.sched) || 0; });
+  var d = Math.round((a - s) * 100) / 100;
+  return ROWS.length + ' staff \u00b7 ' + a + 'h logged' +
+         (d ? ' (' + (d > 0 ? '+' : '') + d + 'h vs roster)' : ' \u00b7 matches roster');
+}
+
+function submit() {
+  if (!VISIT) { alert('Choose a date and site first.'); return; }
+  if (!$('who').value) { alert('Please choose your name.'); return; }
+  var note = $('siteNote').value;
+  if (note) ROWS.forEach(function (r) { if (!r.note) r.note = ''; });
+
+  $('send').disabled = true;
+  $('send').textContent = 'Sending\u2026';
+  google.script.run
+    .withSuccessHandler(function (msg) {
+      // Mark it submitted locally so the warning is right if they come back to it.
+      DATA.submitted[VISIT.date + '|' + VISIT.site] = $('who').value;
+      $('doneMsg').innerHTML = '<b>Thanks \u2014 saved.</b><br>' + msg;
+      $('doneWhere').textContent = pretty(VISIT.date) + ' \u00b7 ' + VISIT.site;
+      $('app').classList.add('hide');
+      $('bar').classList.add('hide');
+      $('startSummary').classList.remove('hide');
+      $('startSummary').textContent =
+        DATA.summary.summarised[VISIT.date + '|' + VISIT.site]
+          ? 'Add site summary (one already exists)' : 'Add site summary';
+      $('doneWrap').classList.remove('hide');
+      $('send').disabled = false;
+      $('send').textContent = 'Submit hours';
+      window.scrollTo(0, 0);
+    })
+    .withFailureHandler(function (e) {
+      $('send').disabled = false;
+      $('send').textContent = 'Submit hours';
+      alert('Could not save: ' + e.message);
+    })
+    .submitHours({
+      date: VISIT.date, site: VISIT.site, submittedBy: $('who').value,
+      siteNote: note,
+      rows: ROWS.map(function (r) {
+        return { name: r.name, role: r.role, sched: r.sched, actual: r.actual,
+                 rope: r.rope, chainsaw: r.chainsaw, reason: r.reason,
+                 note: [r.note, note].filter(String).join(' | ') };
+      })
+    });
+}
+
+// ---------- site summary ----------------------------------------------------
+
+function buildRadios(id, options, onPick) {
+  var box = $(id);
+  box.innerHTML = options.map(function (o, i) {
+    return '<label class="radio' + (i === 0 ? ' on' : '') + '" data-v="' + o + '">' +
+           '<input type="radio" name="' + id + '"' + (i === 0 ? ' checked' : '') + '>' + o + '</label>';
+  }).join('');
+  Array.prototype.forEach.call(box.querySelectorAll('.radio'), function (el) {
+    el.onclick = function () {
+      Array.prototype.forEach.call(box.querySelectorAll('.radio'), function (x) {
+        x.classList.remove('on');
+      });
+      this.classList.add('on');
+      this.querySelector('input').checked = true;
+      onPick(this.getAttribute('data-v'));
+    };
+  });
+}
+
+function hrTotal() {
+  var m = Number($('maintH').value) || 0, p = Number($('primH').value) || 0;
+  $('hrTotal').textContent = (m + p) ? ('Total site hours: ' + Math.round((m + p) * 100) / 100)
+                                     : 'Maintenance + Primary are recorded separately.';
+}
+
+function openSummary() {
+  $('doneWrap').classList.add('hide');
+  $('sumWrap').classList.remove('hide');
+  $('sumBar').classList.remove('hide');
+  $('sumWhere').textContent = pretty(VISIT.date) + ' \u00b7 ' + VISIT.site +
+    (DATA.summary.councils[VISIT.site] ? ' \u00b7 ' + DATA.summary.councils[VISIT.site] : '');
+
+  // "last time at this site" — usually the whole species list, in two taps
+  var last = DATA.summary.lastSpecies[VISIT.site];
+  var box = $('lastSp');
+  if (last && last.species.length) {
+    box.className = 'warn';
+    box.innerHTML = '<b>Last time here (' + last.date + ')</b><br>' +
+      last.species.join(', ') +
+      '<br><button class="btn ghost" id="useLast" style="margin-top:8px">Use these ' +
+      last.species.length + ' species</button>';
+    $('useLast').onclick = function () {
+      last.species.forEach(function (s) { PICKED[s] = 1; });
+      renderSpecies();
+    };
+  } else {
+    box.className = 'muted';
+    box.textContent = 'No previous summary for this site yet.';
+  }
+  hrTotal();
+  renderSpecies();
+  window.scrollTo(0, 0);
+}
+
+function renderSpecies() {
+  var q = ($('spSearch').value || '').toLowerCase().trim();
+  var box = $('spList');
+  var html = '';
+  Object.keys(SPECIES).forEach(function (cat) {
+    var hits = SPECIES[cat].filter(function (s) {
+      return !q || s.toLowerCase().indexOf(q) >= 0;
+    });
+    if (!hits.length) return;
+    html += '<div class="spcat">' + cat + '</div>';
+    hits.forEach(function (s) {
+      html += '<label class="sp' + (PICKED[s] ? ' on' : '') + '" data-s="' +
+              s.replace(/"/g, '&quot;') + '"><input type="checkbox"' +
+              (PICKED[s] ? ' checked' : '') + '>' + s + '</label>';
+    });
+  });
+  box.innerHTML = html || '<p class="muted" style="padding:8px">No match. ' +
+                          'Use the "Other species" box below.</p>';
+  Array.prototype.forEach.call(box.querySelectorAll('.sp'), function (el) {
+    el.onclick = function (ev) {
+      ev.preventDefault();
+      var s = this.getAttribute('data-s');
+      if (PICKED[s]) delete PICKED[s]; else PICKED[s] = 1;
+      renderSpecies();
+    };
+  });
+  var picked = Object.keys(PICKED);
+  $('spPicked').innerHTML = picked.length
+    ? picked.map(function (s) {
+        return '<span class="tag" data-s="' + s.replace(/"/g, '&quot;') + '">' +
+               s.split(' (')[0] + '<b>\u00d7</b></span>';
+      }).join('')
+    : '';
+  Array.prototype.forEach.call($('spPicked').querySelectorAll('.tag'), function (el) {
+    el.onclick = function () { delete PICKED[this.getAttribute('data-s')]; renderSpecies(); };
+  });
+}
+
+function resetSummary() {
+  PICKED = {}; HERB = 'None'; WHS = 'No';
+  ['maintH','primH','spSearch','spOther','herbOther','works','future','fauna','flora','whsDetail']
+    .forEach(function (id) { $(id).value = ''; });
+  $('otherSup').value = '';
+  $('herbOther').classList.add('hide');
+  $('whsDetail').classList.add('hide');
+  buildRadios('herb', HERBICIDES, function (v) {
+    HERB = v; $('herbOther').classList.toggle('hide', v !== 'Other');
+  });
+  buildRadios('whs', ['No', 'Yes'], function (v) {
+    WHS = v; $('whsDetail').classList.toggle('hide', v !== 'Yes');
+  });
+}
+
+function sendSummary() {
+  if (WHS === 'Yes' && !$('whsDetail').value.trim()) {
+    alert('Please describe the WHS issue, broken equipment or material request.');
+    $('whsDetail').focus();
+    return;
+  }
+  $('sendSum').disabled = true;
+  $('sendSum').textContent = 'Sending\u2026';
+  google.script.run
+    .withSuccessHandler(function (msg) {
+      DATA.summary.summarised[VISIT.date + '|' + VISIT.site] = $('who').value;
+      var last = { ts: 'z', date: VISIT.date, species: Object.keys(PICKED) };
+      if (last.species.length) DATA.summary.lastSpecies[VISIT.site] = last;
+      $('doneMsg').innerHTML = '<b>Thanks \u2014 saved.</b><br>' + msg;
+      $('startSummary').classList.add('hide');
+      $('sumWrap').classList.add('hide');
+      $('sumBar').classList.add('hide');
+      $('doneWrap').classList.remove('hide');
+      $('sendSum').disabled = false;
+      $('sendSum').textContent = 'Submit site summary';
+      window.scrollTo(0, 0);
+    })
+    .withFailureHandler(function (e) {
+      $('sendSum').disabled = false;
+      $('sendSum').textContent = 'Submit site summary';
+      alert('Could not save: ' + e.message);
+    })
+    .submitSiteSummary({
+      date: VISIT.date, site: VISIT.site, submittedBy: $('who').value,
+      council: DATA.summary.councils[VISIT.site] || '',
+      otherSupervisor: $('otherSup').value,
+      maintenance: $('maintH').value, primary: $('primH').value,
+      species: Object.keys(PICKED), otherSpecies: $('spOther').value,
+      herbicide: HERB, herbicideDetail: $('herbOther').value,
+      works: $('works').value, futureWorks: $('future').value,
+      fauna: $('fauna').value, flora: $('flora').value,
+      whs: WHS, whsDetail: $('whsDetail').value
+    });
+}
+</script>
+</body>
+</html>
